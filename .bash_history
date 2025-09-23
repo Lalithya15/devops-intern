@@ -11,3 +11,10 @@ eks-ssh-key.pem
 chmod 400 ~/Downloads/eks-ssh-key.pem
 ssh -i ~/Downloads/eks-ssh-key.pem ec2-user@54.82.86.100
 aws ec2 describe-instances --region us-east-1 --query "Reservations[*].Instances[*].[InstanceId,PublicIpAddress,State.Name]" --output table
+sudo yum install git -y 
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/Lalithya15/devops-intern.git
+git branch -M main
+git push -u origin main
