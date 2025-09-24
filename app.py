@@ -1,14 +1,26 @@
 from flask import Flask, request, jsonify
-import joblib
 import pandas as pd
+import xgboost as xgb
+import joblib
+import os
 
 app = Flask(__name__)
 
-# Load model and encoders
-model = joblib.load("recall_risk_model.pkl")
-label_encoders = joblib.load("label_encoders.pkl")
+# Paths to model and encoders
+MODEL_PATH = "recall_risk_model_fixed.json"
+ENCODERS_PATH = "label_encoders.pkl"
 
-# Define mapping for prediction labels
+# Load XGBoost model
+model = xgb.XGBClassifier(eval_metric="logloss")  # no use_label_encoder
+model.load_model(MODEL_PATH)
+
+# Load label encoders
+if os.path.exists(ENCODERS_PATH):
+    label_encoders = joblib.load(ENCODERS_PATH)
+else:
+    label_encoders = {}
+
+# Prediction labels
 prediction_labels = {0: "Safe", 1: "High Recall Risk"}
 
 @app.route('/')
@@ -18,36 +30,31 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Get JSON data
         data = request.get_json()
-
-        # Convert to DataFrame
         df = pd.DataFrame([data])
 
         # Encode categorical columns
-        for col in label_encoders.keys():
+        for col, le in label_encoders.items():
             if col in df.columns:
-                le = label_encoders[col]
                 df[col] = df[col].apply(lambda x: le.transform([x])[0] if x in le.classes_ else -1)
 
-        # Ensure all expected columns exist
+        # Ensure all features exist
         for col in model.feature_names_in_:
             if col not in df.columns:
-                df[col] = 0  # placeholder for missing columns
+                df[col] = 0
 
-        # Reorder columns
         df = df[model.feature_names_in_]
 
-        # Make prediction
+        # Predict
         prediction = model.predict(df)[0]
-        response = {
+        return jsonify({
             "prediction": int(prediction),
             "label": prediction_labels.get(int(prediction), "Unknown")
-        }
-        return jsonify(response)
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
+
