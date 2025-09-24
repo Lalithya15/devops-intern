@@ -1,10 +1,6 @@
-.ssh/
-.bash_history
-.bash_logout
-.bash_profile
-.bashrc
-.cshrc
-.tcshrc
 venv/
+*.pkl
+*.json
+nohup.out
 __pycache__/
-.vscode/
+
