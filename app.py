@@ -3,6 +3,9 @@ import pandas as pd
 import xgboost as xgb
 import joblib
 import os
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='xgboost')
+
 
 app = Flask(__name__)
 
