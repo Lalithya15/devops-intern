@@ -4,8 +4,18 @@ import xgboost as xgb
 import joblib
 import os
 import warnings
+import logging
+from sklearn.preprocessing import LabelEncoder
+
+# Ignore XGBoost UserWarnings
 warnings.filterwarnings("ignore", category=UserWarning, module='xgboost')
 
+# Configure logging
+logging.basicConfig(
+    filename='api.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s'
+)
 
 app = Flask(__name__)
 
@@ -14,7 +24,7 @@ MODEL_PATH = "recall_risk_model_fixed.json"
 ENCODERS_PATH = "label_encoders.pkl"
 
 # Load XGBoost model
-model = xgb.XGBClassifier(eval_metric="logloss")  # no use_label_encoder
+model = xgb.XGBClassifier(eval_metric="logloss")  # no use_label_encoder needed
 model.load_model(MODEL_PATH)
 
 # Load label encoders
@@ -30,10 +40,16 @@ prediction_labels = {0: "Safe", 1: "High Recall Risk"}
 def home():
     return "Vehicle Recall Prediction API is running!"
 
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.get_json()
+        logging.info(f"Received request: {data}")  # Log input
+
         df = pd.DataFrame([data])
 
         # Encode categorical columns
@@ -50,14 +66,19 @@ def predict():
 
         # Predict
         prediction = model.predict(df)[0]
-        return jsonify({
+        response = {
             "prediction": int(prediction),
             "label": prediction_labels.get(int(prediction), "Unknown")
-        })
+        }
+
+        logging.info(f"Response: {response}")  # Log output
+        return jsonify(response)
 
     except Exception as e:
+        logging.error(f"Error: {str(e)}")  # Log errors
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Run with 1 worker and higher timeout in Docker CMD instead of here
+    app.run(host='0.0.0.0', port=8001)
 
