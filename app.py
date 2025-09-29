@@ -80,5 +80,5 @@ def predict():
 
 if __name__ == '__main__':
     # Run with 1 worker and higher timeout in Docker CMD instead of here
-    app.run(host='0.0.0.0', port=8001)
+    app.run(host='0.0.0.0', port=5000)
 

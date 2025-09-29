@@ -1,2 +1,6 @@
 2025-09-25 06:46:44,047 INFO: Received request: {'Feature1': 123, 'Feature2': 'CategoryValue', 'Feature3': 45.6}
 2025-09-25 06:46:44,054 INFO: Response: {'prediction': 0, 'label': 'Safe'}
+2025-09-29 06:57:36,621 INFO: Received request: {'Vehicle_ID': 'V1234', 'Make': 'Toyota', 'Model': 'Camry', 'Year': 2023, 'Engine_Type': 'Gas', 'Mileage': 5000, 'Previous_Recalls': 0, 'Defect_Type': 'None'}
+2025-09-29 06:57:36,932 INFO: Response: {'prediction': 0, 'label': 'Safe'}
+2025-09-29 08:00:20,411 INFO: Received request: {'Make': 'Toyota', 'Model': 'Corolla', 'Year': 2020, 'Engine_Type': 'Petrol', 'Mileage': 15000, 'Previous_Recalls': 0}
+2025-09-29 08:00:20,554 INFO: Response: {'prediction': 0, 'label': 'Safe'}

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: recallrisk-service
+spec:
+  selector:
+    app: recallrisk
+  type: LoadBalancer    # change from NodePort to LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 5000        # external port
+      targetPort: 5000  # container port
+

@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: retrain-model-cron
+spec:
+  schedule: "0 2 * * *"   # Runs every day at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: retrain-model
+            image: 334387323709.dkr.ecr.us-east-1.amazonaws.com/recallrisk-predictor:latest
+            command: ["python3", "/app/train_model.py"]
+            env:
+            - name: DATA_BUCKET
+              value: "recall-risk-data"
+            - name: MODEL_BUCKET
+              value: "recall-risk-models"
+          restartPolicy: OnFailure
+

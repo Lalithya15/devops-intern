@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recallrisk-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: recallrisk
+  template:
+    metadata:
+      labels:
+        app: recallrisk
+    spec:
+      containers:
+      - name: recallrisk-api
+        image: 334387323709.dkr.ecr.us-east-1.amazonaws.com/recallrisk-predictor:latest
+        command: ["python3", "/app/app.py"]   # Run your API
+        ports:
+        - containerPort: 5000
+      restartPolicy: Always
+
