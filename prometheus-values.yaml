@@ -1,0 +1,29 @@
+grafana:
+  enabled: false   # disable Grafana to save memory
+
+alertmanager:
+  enabled: false   # disable alertmanager
+
+kube-state-metrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+
+nodeExporter:
+  enabled: false   # disable nodeExporter
+
+prometheus:
+  prometheusSpec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
