@@ -16,8 +16,7 @@ env:
   # EKS configuration
   KUBE_CLUSTER_NAME: ${{ secrets.KUBE_CLUSTER_NAME }}
   KUBE_DEPLOYMENT_NAME: recallrisk-deployment # Name of your Kubernetes Deployment
-  KUBE_CONTAINER_NAME: recallrisk-api            # Name of the container in the Deployment
-
+  KUBE_CONTAINER_NAME: recallrisk-api             # <--- UPDATED: Container name in the Deployment
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -59,33 +58,42 @@ jobs:
         # Use the official action for a cleaner and more secure login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, Test, and Push Docker image (FIXED)
+      - name: Build Docker image
         run: |
           # Define the full image name
           FULL_IMAGE_NAME=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "FULL_IMAGE_NAME=$FULL_IMAGE_NAME" >> $GITHUB_ENV
           
           echo "Building image tagged with $IMAGE_TAG"
           # 1. Build using the unique commit SHA tag
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
 
-          echo "Starting local smoke test on container 'recallrisk'..."
-          # 2a. Run a quick test (this is what creates the 'recallrisk' container)
-          # We use '|| true' to make the run tolerant of quick failures/crashes, which helps cleanup later.
-          docker run -d --name recallrisk $ECR_REPOSITORY:$IMAGE_TAG || true
-
-          echo "Performing robust cleanup of container 'recallrisk'..."
-          # 2b. FIX: Use '|| true' to ensure the cleanup commands succeed even 
-          #     if the container does not exist (e.g., it crashed/exited immediately)
-          docker stop recallrisk || true
-          docker rm recallrisk || true
+      - name: Run Local Smoke Test
+        # 2a. Run a quick test (this is what creates the container)
+        run: |
+          echo "Starting local smoke test on container 'recallrisk-api'..."
+          # UPDATED: Using the correct container name here
+          docker run -d --name recallrisk-api $ECR_REPOSITORY:$IMAGE_TAG
+          sleep 5 # Give the container a moment to start
+        
+      - name: **FIX: Robust Container Cleanup**
+        # Crucially, we use 'if: always()' to ensure this cleanup step runs
+        # even if the preceding 'Run Local Smoke Test' step failed.
+        if: always()
+        run: |
+          echo "Performing robust cleanup of container 'recallrisk-api'..."
+          # UPDATED: Targeting the correct container name for cleanup
+          docker stop recallrisk-api || true
+          docker rm recallrisk-api || true
           echo "Cleanup complete."
 
-          echo "Tagging and pushing image to ECR..."
+      - name: Tag and Push Docker Image
+        run: |
           # 3. Tag with the full ECR path
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG $FULL_IMAGE_NAME
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG ${{ env.FULL_IMAGE_NAME }}
 
           # 4. Push the uniquely tagged image to ECR
-          docker push $FULL_IMAGE_NAME
+          docker push ${{ env.FULL_IMAGE_NAME }}
 
       # --- CD: Deployment Stage to EKS ---
       - name: Update Kubeconfig
@@ -98,6 +106,7 @@ jobs:
           
           # Use the unique tag for the deployment update
           # This command updates the image for the specified container within the deployment
+          # The container name used here is the KUBE_CONTAINER_NAME environment variable
           kubectl set image deployment/$KUBE_DEPLOYMENT_NAME $KUBE_CONTAINER_NAME=$FULL_IMAGE_NAME
           
           # Wait for the rollout to complete before finishing the workflow
