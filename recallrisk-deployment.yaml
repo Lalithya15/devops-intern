@@ -20,12 +20,13 @@ spec:
         image: 334387323709.dkr.ecr.us-east-1.amazonaws.com/recallrisk-predictor:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 5000
-          protocol: TCP
+          - containerPort: 9090
+            protocol: TCP
         readinessProbe:
           httpGet:
             path: /health
-            port: 5000
+            port: 9090
           initialDelaySeconds: 5
           periodSeconds: 10
+
 
