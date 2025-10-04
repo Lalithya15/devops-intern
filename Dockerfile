@@ -3,16 +3,17 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
+# 1. Copy dependencies first
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# Explicitly copy model files immediately after dependencies
+# This ensures these critical files are copied before general project files
+COPY recall_risk_model_fixed.json /app/
+COPY label_encoders.pkl /app/
+
+# Copy the remaining project files (app.py, etc.)
 COPY . .
-
-# Explicitly copy model files (optional but safe)
-COPY models/recall_risk_model_fixed.json /app/recall_risk_model_fixed.json
-COPY models/label_encoders.pkl /app/label_encoders.pkl
-
 
 EXPOSE 5000
 
