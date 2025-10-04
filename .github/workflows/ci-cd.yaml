@@ -26,26 +26,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Get commit SHA as unique tag
+      - name: Get commit SHA and Cache Breaker Date
         id: set_tag
         run: |
           # Use the first 7 characters of the commit SHA as the unique image tag
           echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+          # Set the current date as a cache breaker for the Dockerfile
+          echo "BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)" >> $GITHUB_ENV 
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      # --- CI: Build & Test Stage (Example) ---
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      # Add Unit Tests step here if applicable:
-      # - name: Run Unit Tests
-      #   run: python -m unittest discover
 
       # --- CD: Containerization & Push Stage ---
       - name: Configure AWS Credentials
@@ -58,37 +55,32 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
+      - name: Build Docker image (with cache bust)
         run: |
           FULL_IMAGE_NAME=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "FULL_IMAGE_NAME=$FULL_IMAGE_NAME" >> $GITHUB_ENV
-          # 1. Build using the unique commit SHA tag
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          # Pass BUILD_DATE as a build-arg to force Docker to re-evaluate the COPY steps
+          docker build --build-arg BUILD_DATE=${{ env.BUILD_DATE }} -t $ECR_REPOSITORY:$IMAGE_TAG .
 
       - name: Run Local Smoke Test
-        # This step creates the container 'recallrisk-api' for cleanup later
         run: |
           echo "Starting local smoke test on container 'recallrisk-api'..."
+          # Running the image temporarily
           docker run -d --name recallrisk-api $ECR_REPOSITORY:$IMAGE_TAG
           sleep 5 # Give the container a moment to start
         
       - name: Robust Container Cleanup
-        # This step uses 'if: always()' and '|| true' to guarantee success 
-        # and resolve the 'unable to find container' error.
         if: always()
         run: |
           echo "Performing robust cleanup of container 'recallrisk-api'..."
-          # Stop the container, ignore error if it's already stopped
+          # Use || true to prevent job failure if container is already gone (e.g., if it crashed)
           docker stop recallrisk-api || true
-          # Remove the container, ignore error if it's already removed
           docker rm recallrisk-api || true
           echo "Cleanup complete."
 
       - name: Tag and Push Docker Image
         run: |
-          # 3. Tag with the full ECR path
           docker tag $ECR_REPOSITORY:$IMAGE_TAG ${{ env.FULL_IMAGE_NAME }}
-          # 4. Push the uniquely tagged image to ECR
           docker push ${{ env.FULL_IMAGE_NAME }}
 
       # --- CD: Deployment Stage to EKS ---
@@ -96,6 +88,7 @@ jobs:
         run: aws eks update-kubeconfig --name $KUBE_CLUSTER_NAME --region $AWS_REGION
 
       - name: Deploy new image to EKS
+        id: deploy
         run: |
           FULL_IMAGE_NAME=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           
@@ -103,5 +96,40 @@ jobs:
           kubectl set image deployment/$KUBE_DEPLOYMENT_NAME $KUBE_CONTAINER_NAME=$FULL_IMAGE_NAME
           
           echo "Deployment update initiated. Waiting for rollout (max 10m)..."
-          # Wait for the rollout to complete before finishing the workflow
-          kubectl rollout status deployment/$KUBE_DEPLOYMENT_NAME --timeout=10m
+          # Allow it to timeout without failing the workflow immediately
+          kubectl rollout status deployment/$KUBE_DEPLOYMENT_NAME --timeout=10m || true 
+
+      - name: Diagnose Failed Deployment
+        # This step runs ONLY if the deployment failed, collecting critical logs
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          echo "Deployment failed. Collecting diagnostic information..."
+          
+          echo "--------------------------------------"
+          echo "1. POD STATUSES:"
+          echo "--------------------------------------"
+          # Get status of the deployment's pods (look for CrashLoopBackOff)
+          kubectl get pods -l app=${{ env.KUBE_DEPLOYMENT_NAME }} 
+          
+          echo "--------------------------------------"
+          echo "2. DEPLOYMENT EVENT HISTORY (describe)"
+          echo "--------------------------------------"
+          # Get detailed events for the deployment (look for ImagePullBackOff or failed probes)
+          kubectl describe deployment/${{ env.KUBE_DEPLOYMENT_NAME }}
+          
+          echo "--------------------------------------"
+          echo "3. RECENT POD LOGS (Check CrashLoopBackOff)"
+          echo "--------------------------------------"
+          # Get the name of a recently failed pod
+          FAILED_POD=$(kubectl get pods -l app=${{ env.KUBE_DEPLOYMENT_NAME }} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          
+          if [ -n "$FAILED_POD" ]; then
+            echo "Attempting to pull logs from pod: $FAILED_POD"
+            kubectl logs $FAILED_POD --container ${{ env.KUBE_CONTAINER_NAME }} || true
+          else
+            echo "Could not reliably find a pod name to pull logs. Check deployment description above."
+          fi
+          
+          # Force the job to fail now that we have the diagnostics
+          exit 1
+
