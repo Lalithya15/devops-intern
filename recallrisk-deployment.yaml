@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recallrisk-deployment
+  namespace: default
+  labels:
+    app: recallrisk
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: recallrisk
+  template:
+    metadata:
+      labels:
+        app: recallrisk
+    spec:
+      containers:
+      - name: recallrisk-api
+        image: 334387323709.dkr.ecr.us-east-1.amazonaws.com/recallrisk-predictor:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+

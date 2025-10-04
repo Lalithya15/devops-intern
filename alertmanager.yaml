@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: recallrisk-alertmanager
+  namespace: monitoring
+spec:
+  replicas: 1
+  version: v0.25.0   # adjust to your version
+  # Configuration via secret
+  configSecret: alertmanager-config
+
+
+

@@ -26,4 +26,9 @@ prometheus:
       limits:
         cpu: 300m
         memory: 256Mi
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager-service.monitoring.svc:9093
 

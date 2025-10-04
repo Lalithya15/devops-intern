@@ -1,0 +1,10 @@
+namespaceSelector:
+  matchNames:
+  - default
+selector:
+  matchLabels:
+    app: recallrisk
+endpoints:
+- port: http-metrics
+  interval: 30s
+

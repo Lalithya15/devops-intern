@@ -2,12 +2,19 @@ apiVersion: v1
 kind: Service
 metadata:
   name: recallrisk-service
+  namespace: default
+  labels:
+    app: recallrisk
 spec:
-  type: LoadBalancer
+  type: NodePort   # 👈 Expose outside the cluster
   selector:
     app: recallrisk
   ports:
-    - port: 80        # browser hits port 80
-      targetPort: 5000 # container listens on 5000
+    - name: http-metrics
+      port: 8080         # Service port inside cluster
+      targetPort: 5000   # Container port
       protocol: TCP
+      nodePort: 30080    # 👈 You can specify, or remove this line to let Kubernetes assign one automatically
+
+
 

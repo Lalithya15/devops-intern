@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: recallrisk-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: recallrisk.rules
+      rules:
+        - alert: HighCPUUsage
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~"recallrisk-deployment.*"}[1m])) > 0.0001
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on RecallRisk API"
+            description: "CPU usage > 0.01% for more than 1 minute"
+
+        - alert: PodCrashLoop
+          expr: kube_pod_container_status_restarts_total{pod=~"recallrisk-deployment.*"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod is crashing repeatedly"
+            description: "Pod restart count > 0 in 1 minute"
+

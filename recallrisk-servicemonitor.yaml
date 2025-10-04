@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: recallrisk-servicemonitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: recallrisk
+  endpoints:
+    - port: http-metrics  # the port your pods expose metrics on
+      interval: 30s
+  namespaceSelector:
+    matchNames:
+      - default
+
