@@ -7,6 +7,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# --- Cache Breaker Added ---
+# Force Docker to re-evaluate the following steps
+ARG BUILD_DATE
+RUN echo "Build started on: ${BUILD_DATE}" 
+
 # Explicitly copy model files immediately after dependencies
 # This ensures these critical files are copied before general project files
 COPY recall_risk_model_fixed.json /app/
