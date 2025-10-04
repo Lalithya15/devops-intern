@@ -16,7 +16,7 @@ env:
   # EKS configuration
   KUBE_CLUSTER_NAME: ${{ secrets.KUBE_CLUSTER_NAME }}
   KUBE_DEPLOYMENT_NAME: recallrisk-deployment # Name of your Kubernetes Deployment
-  KUBE_CONTAINER_NAME: recallrisk             # Name of the container in the Deployment
+  KUBE_CONTAINER_NAME: recallrisk-api            # Name of the container in the Deployment
 
 jobs:
   build-and-deploy:
