@@ -10,8 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Explicitly copy model files (optional but safe)
-COPY recall_risk_model_fixed.json /app/recall_risk_model_fixed.json
-COPY label_encoders.pkl /app/label_encoders.pkl
+COPY models/recall_risk_model_fixed.json /app/recall_risk_model_fixed.json
+COPY models/label_encoders.pkl /app/label_encoders.pkl
+
 
 EXPOSE 5000
 
